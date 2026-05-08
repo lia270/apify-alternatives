@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Apify 平替对比 · 社媒抓取 / 网红数据</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --card: #ffffff;
+    --border: #e7e5e4;
+    --ink: #1c1917;
+    --muted: #78716c;
+    --accent: #2563eb;
+    --accent-soft: #eff6ff;
+    --good: #16a34a;
+    --warn: #ea580c;
+    --bad: #dc2626;
+    --gold: #ca8a04;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 56px 32px 96px; }
+  header { margin-bottom: 40px; }
+  h1 { font-size: 32px; margin: 0 0 8px; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); font-size: 15px; margin: 0; }
+  .meta {
+    margin-top: 16px;
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 12px;
+    color: var(--muted);
+    background: #fff;
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 999px;
+  }
+  .meta::before {
+    content: "";
+    width: 6px; height: 6px;
+    background: var(--good);
+    border-radius: 50%;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .card:hover { border-color: #d6d3d1; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .card .top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    gap: 12px;
+  }
+  .name {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+  .tag {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  .badge {
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .badge.recommend { background: #ecfccb; color: #4d7c0f; }
+  .badge.budget { background: #fef3c7; color: #b45309; }
+  .badge.enterprise { background: #ede9fe; color: #6d28d9; }
+  .badge.aggregator { background: #f1f5f9; color: #475569; }
+  .badge.influencer { background: #fce7f3; color: #be185d; }
+
+  .visit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--ink);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background 0.15s;
+    margin-top: 4px;
+  }
+  .visit-btn:hover { background: #292524; }
+  .visit-btn::after {
+    content: "↗";
+    font-size: 12px;
+    opacity: 0.8;
+  }
+
+  .section {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+  }
+  .section-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+
+  /* coverage matrix */
+  .coverage {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+  .cov-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: #fafaf9;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+  .cov-mark {
+    width: 18px; height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: bold;
+    flex-shrink: 0;
+  }
+  .cov-mark.yes { background: #dcfce7; color: var(--good); }
+  .cov-mark.partial { background: #fef3c7; color: var(--warn); }
+  .cov-mark.no { background: #fee2e2; color: var(--bad); }
+  .cov-name { color: #44403c; }
+  .cov-item.highlight {
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+  }
+  .cov-item.highlight .cov-name { font-weight: 600; }
+
+  /* price summary */
+  .price-summary {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .price-summary .big {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .price-summary .unit { color: var(--muted); font-size: 13px; }
+  .price-range {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .price-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .price-toggle:hover { background: #dbeafe; }
+  .price-toggle .chev { transition: transform 0.2s; }
+  .price-detail {
+    display: none;
+    margin-top: 12px;
+    padding: 12px;
+    background: var(--bg);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .price-detail.open { display: block; }
+  .card.expanded .price-toggle .chev { transform: rotate(180deg); }
+
+  .browser-frame {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .browser-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #f5f5f4;
+    border-bottom: 1px solid var(--border);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.r { background: #ef4444; }
+  .dot.y { background: #eab308; }
+  .dot.g { background: #22c55e; }
+  .url-bar {
+    flex: 1;
+    margin-left: 8px;
+    padding: 4px 10px;
+    background: #fff;
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: ui-monospace, monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .browser-frame img {
+    width: 100%;
+    display: block;
+    cursor: zoom-in;
+  }
+  .price-detail .price-list {
+    font-size: 13px;
+  }
+  .price-detail .tier {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px dotted var(--border);
+  }
+  .price-detail .tier:last-child { border-bottom: 0; }
+  .price-detail .tier strong { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .price-detail .note {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .price-detail .placeholder {
+    padding: 20px 12px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    background: #fff;
+    border-radius: 6px;
+    border: 1px dashed var(--border);
+    margin-bottom: 10px;
+  }
+
+  .traits {
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .trait {
+    font-size: 13px;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .trait::before {
+    content: "•";
+    color: var(--accent);
+    font-weight: bold;
+    flex-shrink: 0;
+  }
+
+  .summary {
+    background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+    border: 1px solid #bfdbfe;
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin-top: 8px;
+  }
+  .summary h2 { margin: 0 0 12px; font-size: 18px; }
+  .summary ul { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.7; }
+  .summary li { margin-bottom: 6px; }
+  .summary code {
+    background: #fff;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    border: 1px solid var(--border);
+  }
+
+  /* lightbox */
+  .lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 1000;
+    cursor: zoom-out;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 20px;
+    overflow-y: auto;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img {
+    max-width: 100%;
+    width: auto;
+    height: auto;
+    border-radius: 8px;
+  }
+
+  footer {
+    margin-top: 32px;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Apify 平替对比</h1>
+    <p class="sub">面向 TikTok / Instagram / YouTube / 网红数据 抓取的 5 个候选平台</p>
+    <div class="meta">数据采集于 2026-05-08 · 真实截图来自各官网定价页</div>
+  </header>
+
+  <div class="grid">
+
+    <!-- ====================== EnsembleData ====================== -->
+    <div class="card" data-card="ensembledata">
+      <div class="top">
+        <div>
+          <div class="tag">候选 1</div>
+          <div class="name">EnsembleData</div>
+          <a class="visit-btn" href="https://ensembledata.com/pricing" target="_blank" rel="noopener">访问官网</a>
+        </div>
+        <span class="badge recommend">推荐</span>
+      </div>
+
+      <div class="section">
+        <div class="section-label">平台覆盖（重点：网红数据）</div>
+        <div class="coverage">
+          <div class="cov-item"><span class="cov-mark yes">✓</span><span class="cov-name">TikTok</span></div>
+          <div class="cov-item"><span class="cov-mark yes">✓</span><span class="cov-name">Instagram</span></div>
+          <div class="cov-item"><span class="cov-mark yes">✓</span><span class="cov-name">YouTube</span></div>
+          <div class="cov-item highlight"><span class="cov-mark partial">~</span><span class="cov-name">网红数据（原始抓取）</span></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">价格参考</div>
+        <div class="price-summary"><span class="big">$100</span><span class="unit">/ mo 起</span></div>
+        <div class="price-range">区间：免费 50 units/天 → Platinum $1,400/mo · 单次请求 1–10 units</div>
+        <button class="price-toggle" onclick="togglePrice('ensembledata')">查看官网定价截图<span class="chev">▾</span></button>
+        <div class="price-detail" id="price-ensembledata">
+          <div class="browser-frame">
+            <div class="browser-bar">
+              <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+              <span class="url-bar">ensembledata.com/pricing</span>
+            </div>
+            <img src="screenshots/ensembledata.png" alt="EnsembleData pricing screenshot" onclick="openLightbox(this.src)">
+          </div>
+          <div class="price-list">
+            <div class="tier"><span>Free Trial</span><strong>$0 · 50 units/天</strong></div>
+            <div class="tier"><span>Wood</span><strong>$100/mo · 1.5K/天</strong></div>
+            <div class="tier"><span>Bronze</span><strong>$200/mo · 5K/天</strong></div>
+            <div class="tier"><span>Silver</span><strong>$400/mo · 11K/天</strong></div>
+            <div class="tier"><span>Gold</span><strong>$800/mo · 25K/天</strong></div>
+            <div class="tier"><span>Platinum</span><strong>$1,400/mo · 50K/天</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">特点</div>
+        <div class="traits">
+          <div class="trait">国内/海外团队都常用，TikTok 数据最全</div>
+          <div class="trait">按"日额度"计费，超额不会突然爆账单</div>
+          <div class="trait">网红数据需自己组装（拿 user info / followers / posts 端点拼）</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================== ScrapeCreators ====================== -->
+    <div class="card" data-card="scrapecreators">
+      <div class="top">
+        <div>
+          <div class="tag">候选 2</div>
+          <div class="name">ScrapeCreators</div>
+          <a class="visit-btn" href="https://scrapecreators.com/" target="_blank" rel="noopener">访问官网</a>
+        </div>
+        <span class="badge budget">最便宜</span>
+      </div>
+
+      <div class="section">
+        <div class="section-label">平台覆盖（重点：网红数据）</div>
+        <div class="coverage">
+          <div class="cov-item"><span class="cov-mark yes">✓</span><span class="cov-name">TikTok</span></div>
+          <div class="cov-item"><span class="cov-mark yes">✓</span><span class="cov-name">Instagram</span></div>
+          <div class="cov-item"><span class="cov-mark yes">✓</span><span class="cov-name">YouTube</span></div>
+          <div class="cov-item highlight"><span class="cov-mark partial">~</span><span class="cov-name">网红数据（原始抓取）</span></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">价格参考</div>
+        <div class="price-summary"><span class="big">$10</span><span class="unit">/ mo 起</span></div>
+        <div class="price-range">区间：免费 100 credits → Business $497/mo · 1 request = 1 credit</div>
+        <button class="price-toggle" onclick="togglePrice('scrapecreators')">查看价格详情<span class="chev">▾</span></button>
+        <div class="price-detail" id="price-scrapecreators">
+          <div class="placeholder">
+            ⚠️ ScrapeCreators 定价页需登录 / 仅在 dashboard 可见<br>
+            以下数据来自官方博客披露 + 第三方实测
+          </div>
+          <div class="price-list">
+            <div class="tier"><span>Free</span><strong>$0 · 100 credits</strong></div>
+            <div class="tier"><span>Solo Dev</span><strong>$10/mo</strong></div>
+            <div class="tier"><span>Freelance</span><strong>$47/mo</strong></div>
+            <div class="tier"><span>Business</span><strong>$497/mo</strong></div>
+            <div class="tier"><span>Enterprise</span><strong>Custom</strong></div>
+          </div>
+          <div class="note">credits 永不过期 · 无 rate limit · 所有 plan 解锁全部 API</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">特点</div>
+        <div class="traits">
+          <div class="trait">$10 起步，最适合 PoC / 老板"先试试"场景</div>
+          <div class="trait">所有 plan 都解锁全部 API（不像 Apify 按 Actor 单买）</div>
+          <div class="trait">产品较新，定价不公开透明，需自测稳定性</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================== RapidAPI ====================== -->
+    <div class="card" data-card="rapidapi">
+      <div class="top">
+        <div>
+          <div class="tag">候选 3</div>
+          <div class="name">RapidAPI 市场</div>
+          <a class="visit-btn" href="https://rapidapi.com/category/Social" target="_blank" rel="noopener">访问官网</a>
+        </div>
+        <span class="badge aggregator">聚合市场</span>
+      </div>
+
+      <div class="section">
+        <div class="section-label">平台覆盖（重点：网红数据）</div>
+        <div class="coverage">
+          <div class="cov-item"><span class="cov-mark yes">✓</span><span class="cov-name">TikTok</span></div>
+          <div class="cov-item"><span class="cov-mark yes">✓</span><span class="cov-name">Instagram</span></div>
+          <div class="cov-item"><span class="cov-mark yes">✓</span><span class="cov-name">YouTube</span></div>
+          <div class="cov-item highlight"><span class="cov-mark partial">~</span><span class="cov-name">网红数据（看具体 API）</span></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">价格参考</div>
+        <div class="price-summary"><span class="big">$0–$59</span><span class="unit">/ mo</span></div>
+        <div class="price-range">单 API 实测：Basic $0 (300/mo) → Pro $59 (3M/mo) → Mega $399 (无限)</div>
+        <button class="price-toggle" onclick="togglePrice('rapidapi')">查看官网定价截图<span class="chev">▾</span></button>
+        <div class="price-detail" id="price-rapidapi">
+          <div class="browser-frame">
+            <div class="browser-bar">
+              <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+              <span class="url-bar">rapidapi.com/.../tiktok-scraper7/pricing</span>
+            </div>
+            <img src="screenshots/rapidapi.png" alt="RapidAPI TikTok Scraper pricing screenshot" onclick="openLightbox(this.src)">
+          </div>
+          <div class="price-list">
+            <div class="tier"><span>Basic</span><strong>$0 · 300 调用/月</strong></div>
+            <div class="tier"><span>Pro</span><strong>$59 · 3M 调用/月</strong></div>
+            <div class="tier"><span>Ultra</span><strong>$159 · 20M 调用/月</strong></div>
+            <div class="tier"><span>Mega</span><strong>$399 · 无限</strong></div>
+          </div>
+          <div class="note">截图为 TikTok Scraper7（市场上热门第三方 API 之一）· 不同 API 价格差异大</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">特点</div>
+        <div class="traits">
+          <div class="trait">单价最低，可只买一个 API（如只要 TikTok）</div>
+          <div class="trait">质量参差，部分 API 几年没维护，需先试调用</div>
+          <div class="trait">每接一个新平台要重新挑供应商和接合同</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================== Bright Data ====================== -->
+    <div class="card" data-card="brightdata">
+      <div class="top">
+        <div>
+          <div class="tag">候选 4</div>
+          <div class="name">Bright Data Web Scraper</div>
+          <a class="visit-btn" href="https://brightdata.com/pricing/web-scraper" target="_blank" rel="noopener">访问官网</a>
+        </div>
+        <span class="badge enterprise">企业级</span>
+      </div>
+
+      <div class="section">
+        <div class="section-label">平台覆盖（重点：网红数据）</div>
+        <div class="coverage">
+          <div class="cov-item"><span class="cov-mark yes">✓</span><span class="cov-name">TikTok</span></div>
+          <div class="cov-item"><span class="cov-mark yes">✓</span><span class="cov-name">Instagram</span></div>
+          <div class="cov-item"><span class="cov-mark yes">✓</span><span class="cov-name">YouTube</span></div>
+          <div class="cov-item highlight"><span class="cov-mark partial">~</span><span class="cov-name">网红数据（含 profile/posts）</span></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">价格参考</div>
+        <div class="price-summary"><span class="big">$1.50</span><span class="unit">/ 1K records</span></div>
+        <div class="price-range">PAYG $1.50/1K → Growth $499/mo (510K) → Premium $1,999/mo</div>
+        <button class="price-toggle" onclick="togglePrice('brightdata')">查看官网定价截图<span class="chev">▾</span></button>
+        <div class="price-detail" id="price-brightdata">
+          <div class="browser-frame">
+            <div class="browser-bar">
+              <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+              <span class="url-bar">brightdata.com/pricing/web-scraper</span>
+            </div>
+            <img src="screenshots/brightdata.png" alt="Bright Data pricing screenshot" onclick="openLightbox(this.src)">
+          </div>
+          <div class="price-list">
+            <div class="tier"><span>Pay-as-you-go</span><strong>$1.50 / 1K records</strong></div>
+            <div class="tier"><span>Growth</span><strong>$499/mo · 510K records</strong></div>
+            <div class="tier"><span>Business</span><strong>$999/mo</strong></div>
+            <div class="tier"><span>Premium</span><strong>$1,999/mo</strong></div>
+          </div>
+          <div class="note">当前促销码 APIS25 6 个月 25% off · 仅成功记录计费</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">特点</div>
+        <div class="traits">
+          <div class="trait">按"成功记录数"计费，没有 Apify 的代理流量黑洞</div>
+          <div class="trait">合规性最强（最大代理供应商之一），适合长期项目</div>
+          <div class="trait">起步 $499/mo 偏贵，但量大后单价比 Apify 便宜很多</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================== Modash ====================== -->
+    <div class="card" data-card="modash">
+      <div class="top">
+        <div>
+          <div class="tag">候选 5</div>
+          <div class="name">Modash</div>
+          <a class="visit-btn" href="https://www.modash.io/pricing" target="_blank" rel="noopener">访问官网</a>
+        </div>
+        <span class="badge influencer">网红垂类</span>
+      </div>
+
+      <div class="section">
+        <div class="section-label">平台覆盖（重点：网红数据）</div>
+        <div class="coverage">
+          <div class="cov-item"><span class="cov-mark yes">✓</span><span class="cov-name">TikTok</span></div>
+          <div class="cov-item"><span class="cov-mark yes">✓</span><span class="cov-name">Instagram</span></div>
+          <div class="cov-item"><span class="cov-mark yes">✓</span><span class="cov-name">YouTube</span></div>
+          <div class="cov-item highlight"><span class="cov-mark yes">✓</span><span class="cov-name">网红数据（3.5 亿创作者库）</span></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">价格参考</div>
+        <div class="price-summary"><span class="big">$199</span><span class="unit">/ mo 起（年付）</span></div>
+        <div class="price-range">Essentials $199–299/mo → Performance $499–599/mo → Enterprise 定制</div>
+        <button class="price-toggle" onclick="togglePrice('modash')">查看官网定价截图<span class="chev">▾</span></button>
+        <div class="price-detail" id="price-modash">
+          <div class="browser-frame">
+            <div class="browser-bar">
+              <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+              <span class="url-bar">modash.io/pricing</span>
+            </div>
+            <img src="screenshots/modash.png" alt="Modash pricing screenshot" onclick="openLightbox(this.src)">
+          </div>
+          <div class="price-list">
+            <div class="tier"><span>Free Trial</span><strong>20 profile views</strong></div>
+            <div class="tier"><span>Essentials (年付)</span><strong>$199/mo</strong></div>
+            <div class="tier"><span>Essentials (月付)</span><strong>$299/mo</strong></div>
+            <div class="tier"><span>Performance (年付)</span><strong>$499/mo</strong></div>
+            <div class="tier"><span>Performance (月付)</span><strong>$599/mo</strong></div>
+            <div class="tier"><span>Enterprise</span><strong>Custom</strong></div>
+          </div>
+          <div class="note">Essentials: 300 profiles + 150 邮箱 + 100 红人追踪 / Performance: 800 + 400 + 250</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">特点</div>
+        <div class="traits">
+          <div class="trait">不是爬虫，是预聚合好的网红数据库（按粉丝/品类/地区筛）</div>
+          <div class="trait">如果重点是"找网红"而非"抓所有帖子"，比爬虫省事 10 倍</div>
+          <div class="trait">含假粉检测、邮箱解锁、campaign 追踪，可直接用于投放</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="summary">
+    <h2>给老板的一句话建议</h2>
+    <ul>
+      <li><strong>预算最紧 / 先试水</strong> → <code>ScrapeCreators $10/mo</code> 跑一周看数据质量</li>
+      <li><strong>正式抓帖子&评论</strong> → <code>EnsembleData Bronze $200/mo</code>（5K units/天，TikTok 最稳）</li>
+      <li><strong>真正在做"找网红 + 投放"</strong> → <code>Modash Essentials $199/mo</code>（年付），唯一一家直接给"网红数据"</li>
+      <li><strong>已知量大 + 要长期跑</strong> → <code>Bright Data $499/mo</code> 起，单价最优</li>
+      <li><strong>只要一个平台数据</strong> → 上 RapidAPI 挑一个 $10–60/mo 的单 API</li>
+    </ul>
+  </div>
+
+  <footer>
+    图例：<span style="color: var(--good)">✓</span> 完整支持 ·
+    <span style="color: var(--warn)">~</span> 需自行组装 / 部分支持 ·
+    <span style="color: var(--bad)">✗</span> 不支持
+  </footer>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<script>
+function togglePrice(id) {
+  const detail = document.getElementById('price-' + id);
+  const card = document.querySelector('[data-card="' + id + '"]');
+  detail.classList.toggle('open');
+  card.classList.toggle('expanded');
+}
+function openLightbox(src) {
+  event.stopPropagation();
+  const lb = document.getElementById('lightbox');
+  document.getElementById('lightbox-img').src = src;
+  lb.classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+</body>
+</html>
